@@ -78,7 +78,7 @@ Resources:
     Properties:
       Parameters:
         CidrBlock: !Sub '10.${ClassB}.0.0/16'
-      TemplateURL: ../vpc-plain/module.yml
+      TemplateURL: './node_modules/@cfn-modules/vpc-plain/module.yml'
   SubnetAPublic:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
