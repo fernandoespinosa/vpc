@@ -186,7 +186,7 @@ Resources:
       - - !GetAtt 'SubnetAPrivate.Outputs.RouteTableId'
         - !GetAtt 'SubnetBPrivate.Outputs.RouteTableId'
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
-      VpcId: !GetAtt 'VpcPlain.Outputs.Id'
+      VpcId: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.Id, { 'Fn::ImportValue': !Sub '${VpcPlainModule}-Id' }]
   VPCEndpointDynamoDB:
     Condition: HasDynamoDBEndpoint
     Type: 'AWS::EC2::VPCEndpoint'
@@ -199,7 +199,7 @@ Resources:
       - - !GetAtt 'SubnetAPrivate.Outputs.RouteTableId'
         - !GetAtt 'SubnetBPrivate.Outputs.RouteTableId'
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
-      VpcId: !GetAtt 'VpcPlain.Outputs.Id'
+      VpcId: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.Id, { 'Fn::ImportValue': !Sub '${VpcPlainModule}-Id' }]
   FlowLogModule:
     Condition: HasFlowLog
     Type: 'AWS::CloudFormation::Stack'
@@ -217,7 +217,7 @@ Outputs:
   StackName:
     Value: !Ref 'AWS::StackName'
   Id:
-    Value: !GetAtt 'VpcPlain.Outputs.Id'
+    Value: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.Id, { 'Fn::ImportValue': !Sub '${VpcPlainModule}-Id' }]
     Export:
       Name: !Sub '${AWS::StackName}-Id'
   CidrBlock:
