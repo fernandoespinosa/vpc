@@ -16,6 +16,10 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'cfn-modules: AWS VPC'
 # cfn-modules:implements(ExposeId)
 Parameters:
+  VpcPlainModule:
+    Description: 'Gimme a description.'
+    Type: String
+    Default: ''
   AlertingModule:
     Description: 'Optional but recommended stack name of alerting module.'
     Type: String
@@ -59,6 +63,7 @@ Parameters:
     Default: true
     AllowedValues: [true, false]
 Conditions:
+  CreateVpcPlainModule: !Equals [!Ref VpcPlainModule, '']
   HasAvailabilityZoneC: !Equals [!Ref NumberOfAvailabilityZones, 3]
   HasS3Endpoint: !Equals [!Ref S3Endpoint, true]
   HasDynamoDBEndpoint: !Equals [!Ref DynamoDBEndpoint, true]
@@ -69,6 +74,7 @@ Conditions:
 Resources:
   VpcPlain:
     Type: 'AWS::CloudFormation::Stack'
+    Condition: CreateVpcPlainModule
     Properties:
       Parameters:
         CidrBlock: !Sub '10.${ClassB}.0.0/16'
@@ -77,7 +83,7 @@ Resources:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       Parameters:
-        VpcPlainModule: !GetAtt 'VpcPlain.Outputs.StackName'
+        VpcPlainModule: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.StackName, !Ref VpcPlainModule]
         Reach: public
         AZIndex: '0'
         AZChar: A
@@ -88,7 +94,7 @@ Resources:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       Parameters:
-        VpcPlainModule: !GetAtt 'VpcPlain.Outputs.StackName'
+        VpcPlainModule: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.StackName, !Ref VpcPlainModule]
         Reach: private
         AZIndex: '0'
         AZChar: A
@@ -108,7 +114,7 @@ Resources:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       Parameters:
-        VpcPlainModule: !GetAtt 'VpcPlain.Outputs.StackName'
+        VpcPlainModule: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.StackName, !Ref VpcPlainModule]
         Reach: public
         AZIndex: '1'
         AZChar: B
@@ -119,7 +125,7 @@ Resources:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       Parameters:
-        VpcPlainModule: !GetAtt 'VpcPlain.Outputs.StackName'
+        VpcPlainModule: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.StackName, !Ref VpcPlainModule]
         Reach: private
         AZIndex: '1'
         AZChar: B
@@ -140,7 +146,7 @@ Resources:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       Parameters:
-        VpcPlainModule: !GetAtt 'VpcPlain.Outputs.StackName'
+        VpcPlainModule: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.StackName, !Ref VpcPlainModule]
         Reach: public
         AZIndex: '2'
         AZChar: C
@@ -152,7 +158,7 @@ Resources:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       Parameters:
-        VpcPlainModule: !GetAtt 'VpcPlain.Outputs.StackName'
+        VpcPlainModule: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.StackName, !Ref VpcPlainModule]
         Reach: private
         AZIndex: '2'
         AZChar: C
@@ -180,7 +186,7 @@ Resources:
       - - !GetAtt 'SubnetAPrivate.Outputs.RouteTableId'
         - !GetAtt 'SubnetBPrivate.Outputs.RouteTableId'
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
-      VpcId: !GetAtt 'VpcPlain.Outputs.Id'
+      VpcId: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.Id, { 'Fn::ImportValue': !Sub '${VpcPlainModule}-Id' }]
   VPCEndpointDynamoDB:
     Condition: HasDynamoDBEndpoint
     Type: 'AWS::EC2::VPCEndpoint'
@@ -193,13 +199,13 @@ Resources:
       - - !GetAtt 'SubnetAPrivate.Outputs.RouteTableId'
         - !GetAtt 'SubnetBPrivate.Outputs.RouteTableId'
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
-      VpcId: !GetAtt 'VpcPlain.Outputs.Id'
+      VpcId: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.Id, { 'Fn::ImportValue': !Sub '${VpcPlainModule}-Id' }]
   FlowLogModule:
     Condition: HasFlowLog
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       Parameters:
-        VpcPlainModule: !GetAtt 'VpcPlain.Outputs.StackName'
+        VpcPlainModule: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.StackName, !Ref VpcPlainModule]
         TrafficType: !If [HasFlowLogRejectOnly, REJECT, ALL]
         RetentionInDays: !Ref FlowLogRetentionInDays
       TemplateURL: './node_modules/@cfn-modules/vpc-flow-log/module.yml'
@@ -211,7 +217,7 @@ Outputs:
   StackName:
     Value: !Ref 'AWS::StackName'
   Id:
-    Value: !GetAtt 'VpcPlain.Outputs.Id'
+    Value: !If [CreateVpcPlainModule, !GetAtt VpcPlain.Outputs.Id, { 'Fn::ImportValue': !Sub '${VpcPlainModule}-Id' }]
     Export:
       Name: !Sub '${AWS::StackName}-Id'
   CidrBlock:
@@ -234,12 +240,12 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-AvailabilityZoneA'
   AvailabilityZoneB:
-    Value: !GetAtt 'SubnetAPublic.Outputs.AvailabilityZone'
+    Value: !GetAtt 'SubnetBPublic.Outputs.AvailabilityZone'
     Export:
       Name: !Sub '${AWS::StackName}-AvailabilityZoneB'
   AvailabilityZoneC:
     Condition: HasAvailabilityZoneC
-    Value: !GetAtt 'SubnetAPublic.Outputs.AvailabilityZone'
+    Value: !GetAtt 'SubnetCPublic.Outputs.AvailabilityZone'
     Export:
       Name: !Sub '${AWS::StackName}-AvailabilityZoneC'
   SubnetIdsPublic:
